@@ -1,0 +1,138 @@
+plugins {
+    id("java")
+    id("io.micronaut.application") version "4.6.1"
+    id("com.gradleup.shadow") version "8.3.9"
+    id("io.micronaut.aot") version "4.6.1"
+
+    // Protobuf plugin
+    id("com.google.protobuf") version "0.9.4"
+}
+
+group = "com.user"
+version = "0.1"
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+
+    // Micronaut
+    annotationProcessor("io.micronaut:micronaut-http-validation")
+    annotationProcessor("io.micronaut.serde:micronaut-serde-processor")
+    annotationProcessor("io.micronaut.data:micronaut-data-processor")
+
+    implementation("io.micronaut.serde:micronaut-serde-jackson")
+    implementation("io.micronaut:micronaut-http-client")
+    implementation("jakarta.annotation:jakarta.annotation-api")
+
+    runtimeOnly("ch.qos.logback:logback-classic")
+    runtimeOnly("org.yaml:snakeyaml")
+
+    // Database
+    implementation("io.micronaut.data:micronaut-data-hibernate-jpa")
+    implementation("io.micronaut.sql:micronaut-jdbc-hikari")
+    runtimeOnly("org.postgresql:postgresql")
+    implementation("jakarta.persistence:jakarta.persistence-api")
+
+    // JWT
+    implementation("com.auth0:java-jwt:4.4.0")
+    implementation("io.jsonwebtoken:jjwt-api:0.11.5")
+    runtimeOnly("io.jsonwebtoken:jjwt-impl:0.11.5")
+    runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.11.5")
+
+    // gRPC + Protobuf
+    implementation("io.micronaut.grpc:micronaut-grpc-runtime")
+    implementation("io.micronaut.grpc:micronaut-grpc-server-runtime")
+
+    implementation("io.grpc:grpc-netty-shaded:1.65.0")
+    implementation("io.grpc:grpc-stub:1.65.0")
+    implementation("io.grpc:grpc-protobuf:1.65.0")
+
+    implementation("com.google.protobuf:protobuf-java:3.25.3")
+    implementation("com.google.protobuf:protobuf-java-util:3.25.3")
+
+    // Fix @Generated issue
+    implementation("javax.annotation:javax.annotation-api:1.3.2")
+
+    testImplementation("io.micronaut:micronaut-http-client")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+}
+
+application {
+    mainClass = "com.user.Application"
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+micronaut {
+    runtime("netty")
+    testRuntime("junit5")
+    processing {
+        incremental(true)
+        annotations("com.user.*")
+    }
+}
+
+graalvmNative.toolchainDetection = false
+
+// ----------------------------------------------------------------------
+// PROTOBUF + GRPC CONFIGURATION
+// ----------------------------------------------------------------------
+protobuf {
+    protoc {
+        artifact = "com.google.protobuf:protoc:3.25.3"
+    }
+    plugins {
+        grpc {
+            artifact = "io.grpc:protoc-gen-grpc-java:1.65.0"
+        }
+    }
+    generateProtoTasks {
+        all().each { task ->
+            task.plugins {
+                grpc {}
+            }
+        }
+    }
+}
+
+// ----------------------------------------------------------------------
+// MAKE SURE proto code is generated BEFORE Java compile
+// ----------------------------------------------------------------------
+tasks.named("compileJava") {
+    dependsOn("generateProto")
+}
+
+// ----------------------------------------------------------------------
+// INCLUDE generated proto sources in Java source set
+// ----------------------------------------------------------------------
+sourceSets {
+    main {
+        java {
+            srcDirs += [
+                    "build/generated/source/proto/main/java",
+                    "build/generated/source/proto/main/grpc"
+            ]
+        }
+    }
+}
+
+tasks.named("dockerfileNative") {
+    jdkVersion = "17"
+}
+configurations.all {
+    resolutionStrategy {
+        eachDependency { details ->
+            if (details.requested.group == "io.jsonwebtoken") {
+                details.useVersion "0.11.5"
+            }
+        }
+        force "io.jsonwebtoken:jjwt-api:0.11.5"
+        force "io.jsonwebtoken:jjwt-impl:0.11.5"
+        force "io.jsonwebtoken:jjwt-jackson:0.11.5"
+    }
+}

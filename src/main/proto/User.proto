@@ -1,0 +1,30 @@
+syntax ="proto3";
+option java_multiple_files=true;
+option java_package="com.gRPC.User";
+option java_outer_classname="UserMAIN";
+message UsergRPC{
+  int32  id=1;
+  string fname=2;
+  string lname=3;
+  string email=4;
+  string username=5;
+  string password=6;
+
+};
+message UserTokenResponse{
+  string token=1;
+};
+
+message Response{
+  bool response=1;
+};
+message FindRequest{
+  string username=1;
+  string password=2;
+};
+
+service UserServices{
+  rpc Adduser(UsergRPC)returns(Response);
+  rpc VerifyUser(FindRequest)returns(UserTokenResponse);
+  rpc UpdateUser(UsergRPC)returns(UsergRPC);
+}

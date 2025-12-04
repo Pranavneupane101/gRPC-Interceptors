@@ -1,0 +1,17 @@
+syntax="proto3";
+option java_multiple_files=true;
+option java_package="com.gRPC.Client";
+option java_outer_classname="UserClient";
+
+message DeleteUserRequest{
+  string username=1;
+  string password=2;
+}
+
+message DeleteResponse{
+  bool response=1;
+}
+
+service VerifiedService{
+  rpc DeleteUser(DeleteUserRequest) returns(DeleteResponse);
+}
